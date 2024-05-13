@@ -11,18 +11,40 @@ public class VoltDatabase {
         client.createConnection(servers);
     }
 
+    private int lastPackageId = 0;
+    private int lastCustomerId = 0;
+    private int lastBalanceId = 0;
+
+    private int generateNextPackageId() {
+        lastPackageId++; // Increment the last assigned package ID
+        return lastPackageId;
+    }
+    
+    private int generateNextCustomerId() {
+        lastCustomerId++; // Increment the last assigned balance ID
+        return lastBalanceId;
+    }
+    
+    private int generateNextBalanceId() {
+        lastBalanceId++; // Increment the last assigned balance ID
+        return lastBalanceId;
+    }
+
     // Method to insert data into PACKAGE table
-    public void insertPackage(int packageId, String packageName, double price, int minutes, int data, int sms, int period) throws Exception {
-        client.callProcedure("@AdHoc", "INSERT INTO PACKAGE VALUES (?, ?, ?, ?, ?, ?, ?);", packageId, packageName, price, minutes, data, sms, period);
+    public void insertPackage(String packageName, double price, int minutes, int data, int sms, int period) throws Exception {
+        int packageId = generateNextPackageId();
+        client.callProcedure("@AdHoc", "INSERT INTO PACKAGE VALUES (?, ?, ?, ?, ?, ?);", packageId, packageName, price, minutes, data, sms, period);
     }
 
     // Method to insert data into CUSTOMER table
-    public void insertCustomer(int custId, String msisdn, String name, String surname, String email, String password, String status, String securityKey) throws Exception {
-        client.callProcedure("@AdHoc", "INSERT INTO CUSTOMER VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?);", custId, msisdn, name, surname, email, password, status, securityKey);
+    public void insertCustomer(String msisdn, String name, String surname, String email, String password, String status, String securityKey) throws Exception {
+        int custId = generateNextCustomerId();
+        client.callProcedure("@AdHoc", "INSERT INTO CUSTOMER VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?);", custId, msisdn, name, surname, email, password, status, securityKey);
     }
 
     // Method to insert data into BALANCE table
-    public void insertBalance(int balanceId, int packageId, int custId, int partitionId, int minutes, int sms, int data, double price, double moneyBalance) throws Exception {
+    public void insertBalance(int packageId, int custId, int partitionId, int minutes, int sms, int data, double price, double moneyBalance) throws Exception {
+        int balanceId = generateNextBalanceId();
         client.callProcedure("@AdHoc", "INSERT INTO BALANCE VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, NULL, ?, ?);", balanceId, packageId, custId, partitionId, minutes, sms, data, price, moneyBalance);
     }
 
@@ -44,6 +66,10 @@ public class VoltDatabase {
     // Method to select the balance of a customer by MSISDN
     public VoltTable selectBalanceByMSISDN(String msisdn) throws Exception {
         return client.callProcedure("@AdHoc", "SELECT b.* FROM BALANCE b JOIN CUSTOMER c ON b.CUST_ID = c.CUST_ID WHERE c.MSISDN = ?;", msisdn).getResults()[0];
+    }
+
+    public VoltTable selectCustomerByMSISDN(String msisdn) throws Exception {
+        return client.callProcedure("@AdHoc", "SELECT * FROM CUSTOMER WHERE MSISDN = ?;", msisdn).getResults()[0];
     }
 
     // Close the VoltDB client connection
